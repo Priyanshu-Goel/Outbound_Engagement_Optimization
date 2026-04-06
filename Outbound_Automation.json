@@ -1,0 +1,1167 @@
+{
+  "name": "Correct_Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        -592
+      ],
+      "id": "f558990b-8407-47d2-85c6-c6304ab9b091",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1hc-B59EfWTec_GtOaviBQB0eqDcKjkHXUP4xN9KqlDY/edit?usp=sharing"
+      },
+      "name": "Get Templates1",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        240,
+        32
+      ],
+      "id": "67d05336-5948-404d-99d2-0527312c87df",
+      "alwaysOutputData": false,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "zNu1I2mX7yq9ilJG",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- INPUT ---\n\nconst text = $input.first()?.json?.content || '';\n\n// --- STORAGE ---\nconst templates = {};\nconst errors = [];\nconst parsedBlocks = {};\n\n// --- REGEX: Extract all === BLOCK === sections ---\nconst regex = /===\\s*([A-Z0-9_]+)\\s*===\\s*([\\s\\S]*?)(?====\\s*[A-Z0-9_]+\\s*===|$)/g;\nlet match;\n\n// Extract all blocks safely\nwhile ((match = regex.exec(text)) !== null) {\n    const key = match[1].trim();\n    const value = match[2].trim();\n    parsedBlocks[key] = value;\n}\n\n// --- PROCESS BLOCKS ---\nfor (const key in parsedBlocks) {\n\n    // Skip subject blocks (we process bodies only)\n    if (key.startsWith('SUBJECT_')) continue;\n\n    const body = parsedBlocks[key];\n    const subjectKey = `SUBJECT_${key}`;\n    const subject = parsedBlocks[subjectKey];\n\n    // --- VALIDATION ---\n    if (!subject) {\n        errors.push(`Missing subject for ${key}`);\n        continue;\n    }\n\n    if (!body) {\n        errors.push(`Missing body for ${key}`);\n        continue;\n    }\n\n    // --- DETERMINE TEMPLATE GROUP ---\n    let group = null;\n\n    if (key.startsWith('PRIMARY')) {\n        group = 'PRIMARY';\n    } \n    else if (key.startsWith('FOLLOWUP_')) {\n        const matchFollow = key.match(/^FOLLOWUP_(\\d+)/);\n        if (matchFollow) {\n            group = `FOLLOWUP_${matchFollow[1]}`;\n        }\n    }\n\n    if (!group) {\n        errors.push(`Unknown template type: ${key}`);\n        continue;\n    }\n\n    // Initialize group if not exists\n    if (!templates[group]) {\n        templates[group] = [];\n    }\n\n    // Add variation\n    templates[group].push({\n        subject,\n        body\n    });\n}\n\n// --- FINAL SAFETY CHECKS ---\nif (!templates.PRIMARY || templates.PRIMARY.length === 0) {\n    errors.push('No PRIMARY templates found');\n}\n\n// Ensure all follow-up levels exist (optional but useful)\nfor (let i = 1; i <= 3; i++) {\n    if (!templates[`FOLLOWUP_${i}`]) {\n        templates[`FOLLOWUP_${i}`] = [];\n    }\n}\n\n// --- OUTPUT ---\nreturn {\n    json: {\n        templates,\n        errors,\n        stats: {\n            totalBlocks: Object.keys(parsedBlocks).length,\n            templateGroups: Object.keys(templates),\n            totalTemplates: Object.values(templates).reduce((sum, arr) => sum + arr.length, 0)\n        }\n    }\n};"
+      },
+      "name": "Parse Templates (Regex)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        32
+      ],
+      "id": "1794f4fd-4452-4f51-bf69-837acfb32603"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1j7iBLT1bujNiXq9AxXU6rjEqAFqoRkxr",
+          "mode": "list",
+          "cachedResultName": "PriyanshuG_Resume (1).pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1j7iBLT1bujNiXq9AxXU6rjEqAFqoRkxr/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "name": "Download Resume1",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        720,
+        32
+      ],
+      "id": "e9382d01-6e32-4606-aa7b-807787461296",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ezhpjj3wfCj4k10z",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "name": "Read Leads1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        944,
+        32
+      ],
+      "id": "31c0270d-a936-4f21-afd1-5e75fcb94db5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NVkGHpVMXoJf7R2E",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- SAFE NODE ACCESS ---\nconst templateNode = $('Parse Templates (Regex)').first();\nconst templates = templateNode?.json?.templates || {};\n\nconst driveNode = $('Download Resume1').first();\nconst resumeBinary = driveNode?.binary?.data?.data ? driveNode.binary : null;\nconst hasResume = !!resumeBinary;\n\n// --- CONFIG ---\nconst MAX_EMAILS = 75;\nlet emailsScheduled = 0;\n\nconst processedItems = [];\n\n// --- PROCESS LOOP ---\nfor (const item of $input.all()) {\n    const row = { ...item.json };\n    row.row_number = Number(row.row_number);\n\n    const status = row.Status || 'NEW';\n    const replied = String(row.Replied).toUpperCase() === 'TRUE';\n\n    let followUpCount = Number(row['FollowUp Count']);\n    if (isNaN(followUpCount)) followUpCount = 0;\n\n    let lastEmailSent = new Date(row['Last Email Sent']);\n    if (isNaN(lastEmailSent)) lastEmailSent = new Date(0);\n\n    const now = new Date();\n\n    let action = 'SKIP';\n    let emailType = '';\n    let newStatus = status;\n    let errorMsg = '';\n\n   // --- STOP CONDITIONS ---\nif (replied || status === 'NOT_RESPONDED') {\n    row.action = 'SKIP';\n    row.newStatus = status;\n    row.errorMsg = '';\n    processedItems.push({ json: row });\n    continue;\n}\n\n    // --- DETERMINE EMAIL TYPE ---\n    if (status === 'NEW') {\n        action = 'SEND';\n        emailType = 'PRIMARY';\n        newStatus = 'CONTACTED';\n    } else {\n        const diffDays = Math.floor((now - lastEmailSent) / (1000 * 60 * 60 * 24));\n\n        if (!isNaN(diffDays) && diffDays >= 2) {\n            if (followUpCount < 3) {\n                action = 'SEND';\n                emailType = `FOLLOWUP_${followUpCount + 1}`;\n                newStatus = `FOLLOWUP_${followUpCount + 1}`;\n            } else {\n                action = 'UPDATE_ONLY';\n                newStatus = 'NOT_RESPONDED';\n            }\n        }\n    }\n\n    // --- VALIDATION & LIMITS ---\n    if (action === 'SEND') {\n\n        if (emailsScheduled >= MAX_EMAILS) {\n            action = 'DEFERRED';\n            errorMsg = 'Daily email limit reached';\n        }\n\n        else if (!hasResume) {\n            action = 'ERROR';\n            errorMsg = 'Resume attachment missing from Drive.';\n        }\n\n        else if (!templates[emailType] || !Array.isArray(templates[emailType]) || templates[emailType].length === 0) {\n            action = 'ERROR';\n            errorMsg = `Missing template variation for ${emailType}.`;\n        }\n\n        else {\n            const variations = templates[emailType];\n            const selected = variations[Math.floor(Math.random() * variations.length)];\n\n            // --- SAFE VARIABLE REPLACEMENT ---\n            const replaceVars = (str = '') =>\n                str\n                    .replace(/{{Name}}/gi, row.Name || '')\n                    .replace(/{{Company}}/gi, row.Company || '')\n                    .replace(/{{Role}}/gi, row.Role || '');\n\n            row.subjectOut = replaceVars(selected?.subject);\n            row.bodyOut = replaceVars(selected?.body);\n\n            row.newFollowUpCount =\n                emailType.startsWith('FOLLOWUP') ? followUpCount + 1 : followUpCount;\n\n            row.dateStr = now.toISOString();\n\n            emailsScheduled++;\n        }\n    }\n\n    // --- FINAL OUTPUT PREPARATION ---\n    row.action = action;\n    row.newStatus = newStatus;\n    row.errorMsg = errorMsg;\n\n    let outItem = { json: row };\n\n    // --- CORRECT BINARY STRUCTURE ---\n    if (resumeBinary && action === 'SEND') {\n        outItem.binary = resumeBinary;\n    }\n\n    processedItems.push(outItem);\n}\n\n// --- RETURN ---\nreturn processedItems;"
+      },
+      "name": "Pre-Processor & Limiter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        32
+      ],
+      "id": "b018e79a-83b5-482e-8a3d-b04bfb06cf72"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "name": "Loop Actionable Rows",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1456,
+        32
+      ],
+      "id": "4885b138-a4a3-41e1-9f2a-36b3593d6207"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ERROR",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f9b0dd25-a1a9-40b4-ad39-019070665a49"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "UPDATE_ONLY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "394bba01-243d-47b7-8e76-15d9b57477f9"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "SEND",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fad527d5-bff8-4607-93e8-95d42d2ed616"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "729e6360-2ec5-4050-8150-e0a81a70c592",
+                    "leftValue": "=={{ $json.action }}",
+                    "rightValue": "SKIP",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Action Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        1712,
+        16
+      ],
+      "id": "fefb118a-386b-4d2d-8e67-230ed1f4c36b"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Row_Number": "={{ $json.row_number }}",
+            "Status": "NOT_RESPONDED"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Row_Number",
+              "displayName": "Row_Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Email Sent",
+              "displayName": "Last Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FollowUp Count",
+              "displayName": "FollowUp Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ThreadId",
+              "displayName": "ThreadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MessageId",
+              "displayName": "MessageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Update NOT_RESPONDED1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2016,
+        32
+      ],
+      "id": "073e44fe-6f85-440b-a471-046748609745",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NVkGHpVMXoJf7R2E",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Error": "={{ $json.errorMsg }}",
+            "row_number": "={{ $json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Email Sent",
+              "displayName": "Last Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sdf",
+              "displayName": "sdf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Log Pre-Process Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2112,
+        -320
+      ],
+      "id": "0046dcd6-dd4e-498c-8509-9be72a59c8a0",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NVkGHpVMXoJf7R2E",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": "={{ Math.floor(Math.random() * 121) + 60 }}",
+        "unit": "seconds"
+      },
+      "name": "Wait (Dynamic)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        272
+      ],
+      "id": "2adc1dad-52a4-44b8-89df-a204d301cf69",
+      "webhookId": "def0aa52-2523-4460-8d50-22380f35ab59"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "={{ $json.subjectOut }}",
+        "message": "={{ $json.bodyOut }}",
+        "options": {}
+      },
+      "name": "Send Email1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        2320,
+        272
+      ],
+      "id": "951a5cc5-f089-4ea3-a53d-dbb7cde7129f",
+      "webhookId": "9a46644c-b7f3-4c92-9db4-473c455b17f7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "skpBjQnV8fTmDrEN",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Error": "={{ $json.errorMsg }}",
+            "Row_Number": "={{ $json.row_number }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Row_Number",
+              "displayName": "Row_Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Email Sent",
+              "displayName": "Last Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FollowUp Count",
+              "displayName": "FollowUp Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ThreadId",
+              "displayName": "ThreadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "MessageId",
+              "displayName": "MessageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Log Gmail Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1472,
+        336
+      ],
+      "id": "4e8b9bbe-6202-4da1-a03a-f38feaf9fe54",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NVkGHpVMXoJf7R2E",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1_ZWjrpV-4eOoHzKZnoLx2P9fxmCDFBrSGAqFwCpWkK4/edit?gid=0#gid=0",
+          "__regex": "https:\\/\\/docs\\.google\\.com\\/spreadsheets\\/d\\/[0-9a-zA-Z\\-_]+.*\\#gid=([0-9]+)"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Row_Number": "={{ $json.row_number }}",
+            "Status": "={{ $json.newStatus }}",
+            "Last Email Sent": "={{ $json.dateStr }}",
+            "FollowUp Count": "={{ $json.row_number }}",
+            "Error": "\"\""
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Row_Number",
+              "displayName": "Row_Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Role",
+              "displayName": "Role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date Added",
+              "displayName": "Date Added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Email Sent",
+              "displayName": "Last Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "FollowUp Count",
+              "displayName": "FollowUp Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Replied",
+              "displayName": "Replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ThreadId",
+              "displayName": "ThreadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "MessageId",
+              "displayName": "MessageId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "name": "Update Success",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1696,
+        368
+      ],
+      "id": "c2b1bd16-9f8a-4ec3-8812-9b3bdc67afc9",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NVkGHpVMXoJf7R2E",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 11 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1298995-8ff8-4d06-8c61-51a40938a178",
+      "name": "Schedule: Daily 12PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -112,
+        32
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        []
+      ]
+    },
+    "Get Templates1": {
+      "main": [
+        [
+          {
+            "node": "Parse Templates (Regex)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Templates (Regex)": {
+      "main": [
+        [
+          {
+            "node": "Download Resume1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Resume1": {
+      "main": [
+        [
+          {
+            "node": "Read Leads1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Leads1": {
+      "main": [
+        [
+          {
+            "node": "Pre-Processor & Limiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-Processor & Limiter": {
+      "main": [
+        [
+          {
+            "node": "Loop Actionable Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Actionable Rows": {
+      "main": [
+        [
+          {
+            "node": "Action Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Router": {
+      "main": [
+        [
+          {
+            "node": "Log Pre-Process Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update NOT_RESPONDED1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait (Dynamic)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Log Pre-Process Error": {
+      "main": [
+        [
+          {
+            "node": "Loop Actionable Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update NOT_RESPONDED1": {
+      "main": [
+        [
+          {
+            "node": "Loop Actionable Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (Dynamic)": {
+      "main": [
+        [
+          {
+            "node": "Send Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Gmail Error": {
+      "main": [
+        [
+          {
+            "node": "Loop Actionable Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Success": {
+      "main": [
+        [
+          {
+            "node": "Loop Actionable Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule: Daily 12PM": {
+      "main": [
+        [
+          {
+            "node": "Get Templates1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6eebbdc4-1cbe-464d-aa48-34367cf98cf5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0fb140ff638fc17d5d8514479e9c4f7602f3d2a65651b567a6277a743634d8d0"
+  },
+  "id": "94tCkSVnWNTRmYw5",
+  "tags": []
+}
