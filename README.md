@@ -1,0 +1,2 @@
+# Outbound_Engagement_Optimization
+Built &amp; shipped an automated n8n outbound engagement system to solve low-response, manual outreach inefficiencies • Itegrated Google suite APIs, reducing manual outreach effort by 80% while ensuring structured data flow throughout • Built a rule-based engine with dynamic templating &amp; multi-stage follow-ups, with rate limiting and error handling.
